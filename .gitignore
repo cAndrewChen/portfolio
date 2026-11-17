@@ -1,0 +1,19 @@
+# build output and dependencies
+node_modules
+.next
+out
+next-env.d.ts
+*.tsbuildinfo
+
+# env and OS junk
+.env*
+.DS_Store
+Thumbs.db
+*.log
+
+# AI tooling and dev-only files, not needed to run the site
+CLAUDE.md
+.claude
+graphify-out
+scripts
+README.md
