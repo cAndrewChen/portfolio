@@ -24,9 +24,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # served at the root of the custom domain (set in the repo's Pages settings), so no base path. Without a custom domain
+      # a project site lives at <user>.github.io/<repo>/ and needs NEXT_PUBLIC_BASE_PATH: /<repo> here.
       - run: npm run build
-        env:
-          NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }} # a project site lives at <user>.github.io/<repo>/
       # .nojekyll stops Pages from hiding the _next/ folder
       - run: touch out/.nojekyll
       - uses: actions/upload-pages-artifact@v3
