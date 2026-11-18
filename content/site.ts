@@ -3,8 +3,8 @@
 
 export const site = {
   name: 'Andrew Chen',
-  intro: 'Software, robotics and research. Scroll to follow Wukong to the work.',
-  resume: '/resume.pdf', // put the file in /public
+  intro: 'Computer Engineering at UC San Diego, interested in software engineering, robotics, ML and AI.',
+  resume: `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/resume.pdf`, // put the file in /public
   email: 'you@example.com',
 }
 

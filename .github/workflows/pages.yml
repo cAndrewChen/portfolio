@@ -25,6 +25,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }} # a project site lives at <user>.github.io/<repo>/
       # .nojekyll stops Pages from hiding the _next/ folder
       - run: touch out/.nojekyll
       - uses: actions/upload-pages-artifact@v3

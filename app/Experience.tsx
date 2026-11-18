@@ -83,21 +83,6 @@ export default function Experience() {
       <div className="stage" aria-hidden="true"><World reduced={reduced} onReady={ready} /></div>
       <div className="grain" aria-hidden="true" />
 
-      <header className="bar">
-        <nav aria-label="Destinations">
-          {stops.map(({ s, i }) => {
-            const sec = s.kind === 'explore' && s.section ? sections[s.section] : null
-            return (
-              <button key={s.id} onClick={() => go(i)} aria-current={at === i ? 'location' : undefined} className={sec === sections.work ? 'to-work' : undefined}>
-                {sec ? sec.title : s.kind === 'explore' && s.name}
-              </button>
-            )
-          })}
-          <a href={site.resume}>Résumé</a>
-          <a href={`mailto:${site.email}`}>Contact</a>
-        </nav>
-      </header>
-
       <main>
         <section className="intro">
           <h1>{site.name}</h1>
@@ -117,16 +102,16 @@ export default function Experience() {
                 <section id={s.section} aria-labelledby={`${s.section}-title`}>
                   {/* each plaque is pinned to a point among the pillars by World.tsx */}
                   <div className="plaque" id={`plaque-${s.id}-0`}>
-                    <div>
+                    <div><div className="ink">
                       <h2 id={`${s.section}-title`}>
                         {sec.title} <span lang="zh" aria-hidden="true">{sec.hanzi}</span>
                       </h2>
                       {sec.body && <p>{sec.body}</p>}
-                    </div>
+                    </div></div>
                   </div>
                   {sec.projects?.map((p, k) => (
                     <article className="plaque" id={`plaque-${s.id}-${k + 1}`} key={p.title}>
-                      <div>
+                      <div><div className="ink">
                         <p className="kind">{p.kind}</p>
                         <h3>{p.title}</h3>
                         {p.media && (/\.(mp4|webm)$/.test(p.media.src)
@@ -135,7 +120,7 @@ export default function Experience() {
                         <p>{p.summary}</p>
                         <p className="stack">Built with {p.stack.join(', ')}</p>
                         {p.links && <p className="links">{p.links.map((l) => <a key={l.label} href={l.href}>{l.label}</a>)}</p>}
-                      </div>
+                      </div></div>
                     </article>
                   ))}
                 </section>

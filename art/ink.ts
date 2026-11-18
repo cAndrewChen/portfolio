@@ -24,7 +24,7 @@ export const loadPaintings = () =>
     const im = new Image()
     im.onload = () => { imgs.set(file.split('.')[0], im); done() }
     im.onerror = () => done()
-    im.src = `/paintings/${file}`
+    im.src = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/paintings/${file}`
   })))
 
 export type Kind = 'ridge' | 'peak' | 'falls' | 'pillar' | 'pine' | 'cloud'
@@ -411,6 +411,8 @@ export function sunTexture() {
 export type Part = { tex: THREE.Texture; w: number; h: number; px: number; py: number }
 /** Pixel height of the figure the parts are drawn for (feet to crown), and where the hips sit above the feet. */
 export const FIGURE = { h: 448, hips: 186 }
+/** Hip pivot to knee, and knee to sole, in the same pixels. */
+export const LEGS = { thigh: 92, shin: 82 }
 
 export function wukongParts() {
   const GOLD = 'rgb(198,156,64)', BRASS = 'rgb(150,112,52)', FUR = 'rgb(134,96,58)', PALE = 'rgb(210,166,124)'
@@ -447,12 +449,14 @@ export function wukongParts() {
     cut(GOLD, () => ctx.rect(70, 136, 20, 21))
   })
 
-  const leg = part(72, 192, 36, 12, () => {
-    cut('rgb(58,50,46)', () => poly(14, 6, 58, 6, 52, 122, 20, 122))
-    cut('rgb(216,202,172)', () => poly(20, 118, 52, 118, 49, 162, 23, 162)) // shin wraps
-    for (let y = 126; y < 160; y += 9) mark(0.5, 2, () => { ctx.moveTo(22, y); ctx.lineTo(50, y + 5) })
-    cut('rgb(28,24,22)', () => poly(21, 158, 51, 158, 60, 184, 12, 187))
-    ctx.strokeStyle = GOLD; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(22, 162); ctx.lineTo(50, 162); ctx.stroke()
+  // the leg is two pieces hinged at the knee (LEGS gives the lengths), so he can sink into a real crouch
+  const thigh = part(72, 116, 36, 12, () => cut('rgb(58,50,46)', () => poly(14, 6, 58, 6, 54, 110, 18, 110)))
+  const shin = part(72, 96, 36, 8, () => { // drawn with the knee 8px from the top
+    cut('rgb(58,50,46)', () => ctx.ellipse(36, 10, 18, 12, 0, 0, 7)) // the knee
+    cut('rgb(216,202,172)', () => poly(20, 18, 52, 18, 49, 66, 23, 66)) // shin wraps
+    for (let y = 26; y < 64; y += 9) mark(0.5, 2, () => { ctx.moveTo(22, y); ctx.lineTo(50, y + 5) })
+    cut('rgb(28,24,22)', () => poly(21, 62, 51, 62, 60, 88, 12, 91))
+    ctx.strokeStyle = GOLD; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(22, 66); ctx.lineTo(50, 66); ctx.stroke()
   })
 
   const upper = part(60, 84, 30, 14, () => {
@@ -524,5 +528,5 @@ export function wukongParts() {
     if (k === 0) { ctx.strokeStyle = GOLD; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(120 - a, 9); ctx.lineTo(120 + a, 9); ctx.stroke() }
   }))
 
-  return { torso, leg, upper, fore, staff, head, plume, tail, cape }
+  return { torso, thigh, shin, upper, fore, staff, head, plume, tail, cape }
 }
