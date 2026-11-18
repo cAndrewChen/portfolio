@@ -5,7 +5,7 @@
 // To extend the journey, append a flight and an explore segment to SEGMENTS.
 import * as THREE from 'three'
 import { sections } from '../content/site'
-import { FRAME, PERCH, fromHuangshanPerch as hp, toWorld, zhangjiajieExit, zhangjiajieStations, type Vec } from '../world/regions'
+import { PERCH, fromHuangshanPerch as hp, toHuangshan, toZhangjiajie, zhangjiajieStations, type Vec } from '../world/regions'
 
 type Shot = { pos: Vec; look: Vec }
 export type Explore = {
@@ -21,8 +21,6 @@ export type Explore = {
 export type Flight = { kind: 'flight'; id: string; span: number; path: Vec[] } // waypoints between two explores
 export type Segment = Explore | Flight
 
-const zj = (v: Vec) => toWorld(FRAME.zhangjiajie, v)
-const hs = (v: Vec) => toWorld(FRAME.huangshan, v)
 const workCount = sections.projects.projects?.length ?? 0
 const researchCount = sections.research.projects?.length ?? 0
 
@@ -37,11 +35,7 @@ export const SEGMENTS: Segment[] = [
   },
   {
     kind: 'flight', id: 'to-zhangjiajie', span: 4.2,
-    path: [
-      [-4.5, 8, -14], [-2, 11, -24], [4, 14, -42], [11, 20, -66], [16, 24, -90],
-      [24, 26, -118], [42, 27.5, -160], [64, 28.5, -205],
-      zj([-7, 31, 60]), zj([-6.5, 25, 30]),
-    ],
+    path: toZhangjiajie,
   },
   {
     kind: 'explore', id: 'zhangjiajie', name: 'Zhangjiajie', hanzi: '张家界', span: 1.2 + 1.5 * workCount,
@@ -50,13 +44,8 @@ export const SEGMENTS: Segment[] = [
     stations: zhangjiajieStations(workCount), // one per project
   },
   {
-    kind: 'flight', id: 'to-huangshan', span: 8.5,
-    // up out of the pillars, right round through most of a half-circle, then the long run south over the sea of clouds,
-    // weaving a little (regions.ts scatters the clouds about x = -7 in Huangshan's frame)
-    path: [
-      ...zhangjiajieExit, hs([5, 20, 450]), hs([-19, 18, 300]), hs([-7, 14.5, 150]), hs([-6.5, 10.5, 90]),
-      hp([1, 6, 50]), hp([0.5, 3.5, 28]),
-    ],
+    kind: 'flight', id: 'to-huangshan', span: 7, // shorter and the chase camera swings too fast round the turn
+    path: [...toHuangshan, hp([1, 6, 50]), hp([0.5, 3.5, 28])],
   },
   {
     kind: 'explore', id: 'huangshan', name: 'Huangshan', hanzi: '黄山', span: 1.2 + 1.5 * researchCount,

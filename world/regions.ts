@@ -13,6 +13,7 @@ export type Piece = {
   flip?: boolean
   hole?: [number, number] // cave sheets: the opening's radii, as fractions of the sheet
   tone?: Tone // which painting the brushwork is cut from
+  yaw?: number // turned about its upright, within its region; otherwise it faces the region's +z
 }
 export type Region = { id: string; origin: Vec; yaw: number; pieces: Piece[] }
 
@@ -157,7 +158,7 @@ const exitClimb: Vec[] = ([[3, 0.26, -30], [8, 0.65, -62], [15, 1, -90]] as Vec[
   ([dx, k, dz]): Vec => [exit0[0] + dx, exit0[1] + (70 - exit0[1]) * k, exit0[2] + dz],
 )
 // the turn, flown level above the pillar tops: a circle to the right. Headings are radians right of Zhangjiajie's forward.
-const TURN = { r: 120, from: 0.245, to: 3 }
+const TURN = { r: 80, from: 0.245, to: 3 }
 const exitTurn: Vec[] = Array.from({ length: 6 }, (_, k): Vec => {
   const p = exitClimb[2], a = TURN.from + ((k + 1) / 6) * (TURN.to - TURN.from)
   return [p[0] + TURN.r * (Math.cos(TURN.from) - Math.cos(a)), p[1], p[2] - TURN.r * (Math.sin(a) - Math.sin(TURN.from))]
@@ -193,7 +194,7 @@ const huangshan: Region = {
     { kind: 'cloud', seed: 80, at: [10, -2, -20], size: [20, 6] },
     { kind: 'cloud', seed: 81, at: [26, -4, -40], size: [30, 8] },
     { kind: 'cloud', seed: 82, at: [-20, 2, -45], size: [34, 9] },
-    { kind: 'cloud', seed: 83, at: [-6, 0, -63], size: [44, 11] },
+    { kind: 'cloud', seed: 83, at: [-6, -6, -63], size: [44, 11] }, // under the last station: any higher and it swallows Wukong
     { kind: 'cloud', seed: 84, at: [40, 2, -97], size: [40, 10] },
     { kind: 'cloud', seed: 80, at: [-40, 4, -120], size: [70, 14], flip: true },
     // the sea of clouds flown over on the way in, kept below the flight line
@@ -220,7 +221,99 @@ const huangshan: Region = {
   ],
 }
 
-export const REGIONS: Region[] = [huaguo, crossing, zhangjiajie, huangshan]
+// ---- the flights (journey.ts flies these waypoints) and the scenery standing along them
+
+/** Huaguo Shan to Zhangjiajie, in world space. */
+export const toZhangjiajie: Vec[] = [
+  [-4.5, 8, -14], [-2, 11, -24], [4, 14, -42], [11, 20, -66], [16, 24, -90],
+  [24, 26, -118], [42, 27.5, -160], [64, 28.5, -205],
+  toWorld(zhangjiajie, [-7, 31, 60]), toWorld(zhangjiajie, [-6.5, 25, 30]),
+]
+/** Zhangjiajie to Huangshan, in world space: up out of the pillars, right round through most of a half-circle, then the run
+ *  south over the sea of clouds, weaving a little (the clouds above are scattered about x = -7 in Huangshan's frame).
+ *  journey.ts adds the approach to the perch. */
+export const toHuangshan: Vec[] = [
+  ...[...exitClimb, ...exitTurn].map((v) => toWorld(zhangjiajie, v)),
+  ...([[5, 20, 450], [-19, 18, 300], [-7, 14.5, 150], [-6.5, 10.5, 90]] as Vec[]).map((v) => toWorld(huangshan, v)),
+]
+
+const nProj = sections.projects.projects?.length ?? 0, nRes = sections.research.projects?.length ?? 0
+const nearHs = (d: Vec): Vec => toWorld(huangshan, [hsPerch[0] + d[0], hsPerch[1] + d[1], hsPerch[2] + d[2]])
+/** Everywhere the camera goes, in journey order: both flights, Zhangjiajie's stations, Huangshan's approach and stations. */
+const route: Vec[] = [
+  ...toZhangjiajie, toWorld(zhangjiajie, perch), ...stationsLocal(nProj).map((v) => toWorld(zhangjiajie, v)), ...toHuangshan,
+  nearHs([1, 6, 50]), nearHs([0.5, 3.5, 28]), nearHs([0, 0, 0]), ...Array.from({ length: nRes }, (_, k) => nearHs([0, 4 + 3 * k, -30 * (k + 1)])),
+]
+const PILLARS = [7, toZhangjiajie.length + 1 + nProj + 8] // route segments near which the land is Zhangjiajie's: the approach through the turn
+
+/** The nearest point of the route to (x, z): its distance, height, position and place along the route (segment index + fraction). */
+function nearest(x: number, z: number) {
+  const q = { d: Infinity, y: 0, x: 0, z: 0, at: 0 }
+  for (let i = 1; i < route.length; i++) {
+    const a = route[i - 1], b = route[i], dx = b[0] - a[0], dz = b[2] - a[2]
+    const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[2]) * dz) / (dx * dx + dz * dz || 1)))
+    const px = a[0] + dx * t, pz = a[2] + dz * t, d = Math.hypot(x - px, z - pz)
+    if (d < q.d) Object.assign(q, { d, y: a[1] + (b[1] - a[1]) * t, x: px, z: pz, at: i - 1 + t })
+  }
+  return q
+}
+/** The route `back` units (along it) before place `at`: where the camera is coming from. */
+const segLen = route.slice(1).map((b, i) => Math.hypot(b[0] - route[i][0], b[2] - route[i][2]))
+function before(at: number, back: number): [number, number] {
+  let i = Math.min(Math.floor(at), segLen.length - 1), left = (at - i) * segLen[i] - back
+  while (left < 0 && i > 0) left += segLen[--i]
+  const t = Math.max(0, left / segLen[i]), a = route[i], b = route[i + 1]
+  return [a[0] + (b[0] - a[0]) * t, a[2] + (b[2] - a[2]) * t]
+}
+const summit = (k: Kind, seed: number) => {
+  const s = shape(k, seed)
+  let b = 0.5
+  for (let x = 0.2; x <= 0.8; x += 0.05) if (s.top(x) > s.top(b)) b = x
+  return b
+}
+
+// ---- terrain everywhere: rock fills the land round the whole route, out to where the fog takes it, so whichever way the
+// camera looks there is something near and far. Each sheet turns to face the stretch of route the camera approaches it along
+// (facing straight across to the route, the ones nearby were seen edge-on as the camera came up to them).
+const GAP = 20 // nothing comes nearer the route than this
+const SEE = 300 // and nothing is placed further than this (fog: World.tsx)
+const land: Piece[] = (() => {
+  const r = rand(123), xs = route.map((v) => v[0]), zs = route.map((v) => v[2]), out: { at: number; p: Piece[] }[] = []
+  const c = Math.cos(huangshan.yaw), s = Math.sin(huangshan.yaw)
+  for (let gx = Math.min(...xs) - SEE; gx < Math.max(...xs) + SEE; gx += 34)
+    for (let gz = Math.min(...zs) - SEE; gz < Math.max(...zs) + SEE; gz += 34) {
+      const x = gx + (r() - 0.5) * 30, z = gz + (r() - 0.5) * 30, q = nearest(x, z), d = q.d
+      if (d > SEE || (d > 130 && r() < 0.45) || Math.hypot(x, z) < 150) continue // Huaguo Shan is its own composed painting
+      const hx = (x - huangshan.origin[0]) * c - (z - huangshan.origin[2]) * s, hz = (x - huangshan.origin[0]) * s + (z - huangshan.origin[2]) * c
+      if (Math.abs(hx - hsPerch[0]) < 60 && hz > -200 && hz < 30) continue // keep the view out to Huangshan's summits clear
+      const [bx, bz] = before(q.at, 90), yaw = Math.atan2(bx - x, bz - z), fx = Math.sin(yaw), fz = Math.cos(yaw)
+      const pillar = q.at >= PILLARS[0] && q.at <= PILLARS[1]
+      const wide = !pillar && d > 120
+      const h = pillar ? 56 + r() * 50 + d * 0.35 : 32 + d * 0.45 + r() * 18
+      const w = pillar ? (7 + r() * 6) * (1 + d / 60) : h * (wide ? 1.6 + r() * 0.6 : 0.5 + r() * 0.3)
+      // the sheet's two edges must stay clear of the route too, where it bends
+      if ([-1, 1].some((e) => nearest(x + e * fz * w / 2, z - e * fx * w / 2).d < GAP) || d < GAP + 4) continue
+      const base = pillar ? -40 : q.y - 45 - d * 0.08, ps: Piece[] = []
+      const i = out.length, tones: Tone[] = q.at < PILLARS[0] ? ['jade', 'blue', 'ink'] : ['dusk', 'ink']
+      const kind: Kind = pillar ? 'pillar' : wide ? 'ridge' : 'peak'
+      const seed = pillar ? 70 + (i % 6) : wide ? [51, 52, 61][i % 3] : [21, 32, 41][i % 3]
+      const pine = !pillar && !wide && d < 90 && r() < 0.6
+      ps.push({ kind, seed, yaw, tone: pillar ? 'dusk' : tones[i % tones.length], flip: !pine && r() < 0.5, at: [x, base, z], size: [w, h] })
+      if (pine) {
+        const ox = (summit(kind, seed) - 0.5) * w, t = shape(kind, seed).top(summit(kind, seed)) * h, sz = w * 0.4
+        ps.push({ kind: 'pine', seed: 1 + (i % 4), yaw, at: [x + ox * fz + 0.3 * fx, base + t - 1, z - ox * fx + 0.3 * fz], size: [sz, sz] })
+      }
+      // a bank of cloud in front of its foot, so the cut lower edge never shows
+      const cw = pillar ? 30 + r() * 30 + d * 0.2 : Math.min(w * 1.3 + 8, 70)
+      if (d < 200 && (!pillar || r() < 0.45))
+        ps.push({ kind: 'cloud', seed: 80 + (i % 5), yaw, flip: r() < 0.5, at: [x + fx * 2, pillar ? -16 + r() * 14 : base - 2, z + fz * 2], size: [Math.min(cw, 2 * (d - GAP)), Math.min(cw, 2 * (d - GAP)) * 0.28] })
+      out.push({ at: q.at, p: ps })
+    }
+  return out.sort((a, b) => a.at - b.at).flatMap((o) => o.p) // built in journey order
+})()
+
+// The land mounts after Zhangjiajie (World builds in this order), which must be in before the opening flight lands.
+export const REGIONS: Region[] = [huaguo, crossing, zhangjiajie, { id: 'land', origin: [0, 0, 0], yaw: 0, pieces: land }, huangshan]
 export const FRAME = { huaguo, crossing, zhangjiajie, huangshan }
 
 /** Where Wukong stands in each region, in world space. */
@@ -231,9 +324,6 @@ export const PERCH = {
 }
 
 export const zhangjiajieStations = (n: number) => stationsLocal(n).map((v) => toWorld(zhangjiajie, v))
-
-/** The climb out of Zhangjiajie from the last station and the turn back south, in world space. */
-export const zhangjiajieExit = [...exitClimb, ...exitTurn].map((v) => toWorld(zhangjiajie, v))
 
 /** A point `d` away from Wukong's Huangshan perch (in Huangshan's frame), in world space. */
 export const fromHuangshanPerch = (d: Vec): Vec => toWorld(huangshan, [hsPerch[0] + d[0], hsPerch[1] + d[1], hsPerch[2] + d[2]])

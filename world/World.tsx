@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import * as THREE from 'three'
 import { FIGURE, LEGS, MIST, caveTexture, loadPaintings, mistTexture, rangeTexture, silkTexture, sunTexture, texture, waterTexture, wukongParts, type Kind, type Part } from '../art/ink'
 import { ANCHORS, S, intro, progress, sample } from '../journey/journey'
-import { REGIONS, type Piece } from './regions'
+import { FRAME, REGIONS, type Piece } from './regions'
 
 const PLANE = new THREE.PlaneGeometry(1, 1)
 const { clamp, lerp, smoothstep } = THREE.MathUtils
@@ -46,7 +46,7 @@ function Sheet({ p, reduced }: { p: Piece; reduced: boolean }) {
     <mesh
       ref={ref} geometry={PLANE} material={material}
       position={[p.at[0], p.at[1] + h / 2, p.at[2]]}
-      scale={[p.flip ? -w : w, h, 1]}
+      rotation-y={p.yaw ?? 0} scale={[p.flip ? -w : w, h, 1]}
       castShadow={!flat} receiveShadow={!flat}
     />
   )
@@ -351,7 +351,7 @@ function Plaques() {
 // so the crossing and Zhangjiajie are in before the flight lands and Huangshan follows in the background.
 const OPENING = REGIONS[0].pieces.length
 const SHEETS = REGIONS.reduce((n, r) => n + r.pieces.length, 0)
-const UPTO_ZJ = REGIONS.slice(0, 3).reduce((n, r) => n + r.pieces.length, 0)
+const UPTO_ZJ = REGIONS.slice(0, REGIONS.indexOf(FRAME.zhangjiajie) + 1).reduce((n, r) => n + r.pieces.length, 0)
 
 export default function World({ reduced, onReady }: { reduced: boolean; onReady: () => void }) {
   // the sheets are painted from the painting crops, so wait for those before building the world
@@ -364,13 +364,13 @@ export default function World({ reduced, onReady }: { reduced: boolean; onReady:
     if (process.env.NODE_ENV !== 'production' && shown >= UPTO_ZJ && shown - 8 < UPTO_ZJ)
       console.assert(intro.k < 1 || reduced, 'loading: Zhangjiajie was still being built when the opening flight landed')
     if (!shown || shown >= SHEETS) return
-    const id = setTimeout(() => setShown((n) => Math.min(SHEETS, n + 8)), 60)
+    const id = setTimeout(() => setShown((n) => Math.min(SHEETS, n + 12)), 60)
     return () => clearTimeout(id)
   }, [shown, onReady, reduced])
   let left = shown
   return (
     <Canvas flat shadows dpr={[1, 1.75]} camera={{ near: 0.3, far: 1600, fov: 27 }} gl={{ antialias: true, powerPreference: 'high-performance' }}>
-      <fog attach="fog" args={[MIST, 40, 290]} />
+      <fog attach="fog" args={[MIST, 40, 380]} />
       <Rig reduced={reduced} />
       {REGIONS.map((r) => {
         const n = Math.min(left, r.pieces.length)
