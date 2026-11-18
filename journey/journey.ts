@@ -23,7 +23,8 @@ export type Segment = Explore | Flight
 
 const zj = (v: Vec) => toWorld(FRAME.zhangjiajie, v)
 const hs = (v: Vec) => toWorld(FRAME.huangshan, v)
-const workCount = sections.work.projects?.length ?? 0
+const workCount = sections.projects.projects?.length ?? 0
+const researchCount = sections.research.projects?.length ?? 0
 
 export const SEGMENTS: Segment[] = [
   {
@@ -44,7 +45,7 @@ export const SEGMENTS: Segment[] = [
   },
   {
     kind: 'explore', id: 'zhangjiajie', name: 'Zhangjiajie', hanzi: '张家界', span: 1.2 + 1.5 * workCount,
-    section: 'work',
+    section: 'projects',
     perch: PERCH.zhangjiajie, mood: 1,
     stations: zhangjiajieStations(workCount), // one per project
   },
@@ -58,12 +59,12 @@ export const SEGMENTS: Segment[] = [
     ],
   },
   {
-    kind: 'explore', id: 'huangshan', name: 'Huangshan', hanzi: '黄山', span: 1.6,
+    kind: 'explore', id: 'huangshan', name: 'Huangshan', hanzi: '黄山', span: 1.2 + 1.5 * researchCount,
+    section: 'research',
     perch: PERCH.huangshan, mood: 1,
-    shots: [
-      { pos: hp([7, 3, 34]), look: hp([4, 8.5, -60]) },
-      { pos: hp([5, 2.5, 22]), look: hp([1, 6, -60]) },
-    ],
+    // out over the sea of clouds toward the summits, one hover point per scroll; 30 apart like Zhangjiajie's,
+    // so the next scroll stays beyond Plaques' 40-unit fade-in range until you leave the current one
+    stations: Array.from({ length: researchCount }, (_, k) => hp([k % 2 ? -3 : 3, 4 + 3 * k, -30 * (k + 1)])),
   },
 ]
 
@@ -202,10 +203,11 @@ export function sample(p: number, o = S) {
 // self-check: the camera never jumps and never goes non-finite anywhere on the timeline
 if (process.env.NODE_ENV !== 'production') {
   const prev = new THREE.Vector3(), probe = { ...S, cam: new THREE.Vector3(), look: new THREE.Vector3(), wk: new THREE.Vector3() }
-  for (let k = 0; k <= 3000; k++) {
-    sample(k / 3000, probe)
+  const n = Math.ceil(TOTAL * 140) // samples per viewport height of scroll, so a longer journey isn't sampled more coarsely
+  for (let k = 0; k <= n; k++) {
+    sample(k / n, probe)
     console.assert(Number.isFinite(probe.cam.lengthSq() + probe.look.lengthSq() + probe.wk.lengthSq()), 'journey: non-finite at', k)
-    console.assert(k === 0 || prev.distanceTo(probe.cam) < 2, 'journey: camera jump at', k / 3000)
+    console.assert(k === 0 || prev.distanceTo(probe.cam) < 2, 'journey: camera jump at', k / n)
     prev.copy(probe.cam)
   }
 }

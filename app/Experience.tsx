@@ -74,14 +74,25 @@ export default function Experience() {
       behavior: reduced ? 'auto' : 'smooth',
     })
   const ready = useCallback(() => { document.fonts.ready.then(() => setLoaded(true)) }, [])
-  const workStop = stops.find((x) => (x.s as { section?: string }).section === 'work')
+  const workStop = stops.find((x) => (x.s as { section?: string }).section === 'projects')
 
   return (
     <div ref={root} className="experience">
-      {workStop && <button className="skip" onClick={() => go(workStop.i)}>Skip to work</button>}
+      {workStop && <button className="skip" onClick={() => go(workStop.i)}>Skip to projects</button>}
       <div className="sky" aria-hidden="true" />
       <div className="stage" aria-hidden="true"><World reduced={reduced} onReady={ready} /></div>
       <div className="grain" aria-hidden="true" />
+
+      {/* the ink filter for the plaques' writing (globals.css .ink): ragged letter edges plus a faint feather into the paper */}
+      <svg width="0" height="0" aria-hidden="true" style={{ position: 'absolute' }}>
+        <filter id="bleed" x="-5%" y="-5%" width="110%" height="110%">
+          <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="5" result="n" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5" xChannelSelector="R" yChannelSelector="G" result="d" />
+          <feGaussianBlur in="d" stdDeviation=".7" result="b" />
+          <feComponentTransfer in="b" result="h"><feFuncA type="linear" slope=".45" /></feComponentTransfer>
+          <feMerge><feMergeNode in="h" /><feMergeNode in="d" /></feMerge>
+        </filter>
+      </svg>
 
       <main>
         <section className="intro">
@@ -104,7 +115,7 @@ export default function Experience() {
                   <div className="plaque" id={`plaque-${s.id}-0`}>
                     <div><div className="ink">
                       <h2 id={`${s.section}-title`}>
-                        {sec.title} <span lang="zh" aria-hidden="true">{sec.hanzi}</span>
+                        {sec.title} {sec.hanzi && <span lang="zh" aria-hidden="true">{sec.hanzi}</span>}
                       </h2>
                       {sec.body && <p>{sec.body}</p>}
                     </div></div>
@@ -112,13 +123,13 @@ export default function Experience() {
                   {sec.projects?.map((p, k) => (
                     <article className="plaque" id={`plaque-${s.id}-${k + 1}`} key={p.title}>
                       <div><div className="ink">
-                        <p className="kind">{p.kind}</p>
+                        {p.kind && <p className="kind">{p.kind}</p>}
                         <h3>{p.title}</h3>
                         {p.media && (/\.(mp4|webm)$/.test(p.media.src)
                           ? <video src={p.media.src} aria-label={p.media.alt} controls preload="none" />
                           : <img src={p.media.src} alt={p.media.alt} loading="lazy" />)}
                         <p>{p.summary}</p>
-                        <p className="stack">Built with {p.stack.join(', ')}</p>
+                        {p.stack && <p className="stack">Built with {p.stack.join(', ')}</p>}
                         {p.links && <p className="links">{p.links.map((l) => <a key={l.label} href={l.href}>{l.label}</a>)}</p>}
                       </div></div>
                     </article>

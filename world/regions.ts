@@ -152,7 +152,7 @@ const zhangjiajie: Region = {
 
 // Where Wukong leaves Zhangjiajie (his last station), and his climb out over the pillar tops as the turn begins.
 // shortcut: the climb needs ~90 units of cleared corridor past the last station, which `line` gives up to 5 projects; lengthen `line` beyond that.
-const exit0 = stationsLocal(sections.work.projects?.length ?? 0).at(-1) ?? perch
+const exit0 = stationsLocal(sections.projects.projects?.length ?? 0).at(-1) ?? perch
 const exitClimb: Vec[] = ([[3, 0.26, -30], [8, 0.65, -62], [15, 1, -90]] as Vec[]).map(
   ([dx, k, dz]): Vec => [exit0[0] + dx, exit0[1] + (70 - exit0[1]) * k, exit0[2] + dz],
 )
