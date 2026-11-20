@@ -298,9 +298,11 @@ function finish(c: HTMLCanvasElement) {
 }
 
 const textures = new Map<string, THREE.Texture>()
+/** Which painted texture a sheet uses: sheets with the same key share one texture (and can be drawn together). */
+export const textureKey = (kind: Kind, seed: number, k = 1, tone: Tone = 'jade') => kind + seed + '/' + k + tone
 /** `k` is ink strength: 1 for the middle distance, more for foreground sheets. */
 export function texture(kind: Kind, seed: number, k = 1, tone: Tone = 'jade') {
-  const key = kind + seed + '/' + k + tone
+  const key = textureKey(kind, seed, k, tone)
   if (!textures.has(key)) {
     const s = shape(kind, seed)
     const [c, ctx] = canvas(s.w, s.h)

@@ -4,19 +4,14 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import * as THREE from 'three'
 import { FIGURE, LEGS, MIST, caveTexture, loadPaintings, mistTexture, rangeTexture, silkTexture, sunTexture, texture, waterTexture, wukongParts, type Kind, type Part } from '../art/ink'
 import { ANCHORS, S, intro, progress, sample } from '../journey/journey'
+import { buildBatches, checkBatches } from './batches'
+import { PLANE, paper } from './paper'
 import { FRAME, REGIONS, type Piece } from './regions'
 import Stats from './Stats'
 
-const PLANE = new THREE.PlaneGeometry(1, 1)
 const { clamp, lerp, smoothstep } = THREE.MathUtils
 
-// One lit, hard-cut paper material per texture. alphaToCoverage keeps the cut edge clean.
-const mats = new Map<string, THREE.Material>()
-function paper(map: THREE.Texture) {
-  if (!mats.has(map.uuid))
-    mats.set(map.uuid, new THREE.MeshLambertMaterial({ map, alphaTest: 0.5, alphaToCoverage: true, side: THREE.DoubleSide }))
-  return mats.get(map.uuid)!
-}
+if (process.env.NODE_ENV !== 'production') checkBatches(REGIONS, buildBatches(REGIONS))
 
 function Sheet({ p, reduced }: { p: Piece; reduced: boolean }) {
   const ref = useRef<THREE.Mesh>(null!)
