@@ -2,17 +2,19 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import * as THREE from 'three'
-import { FIGURE, LEGS, MIST, caveTexture, loadPaintings, mistTexture, rangeTexture, silkTexture, sunTexture, texture, waterTexture, wukongParts, type Kind, type Part } from '../art/ink'
+import { FIGURE, LEGS, MIST, caveTexture, loadPaintings, mistTexture, rangeTexture, silkTexture, sunTexture, texture, waterTexture, wukongParts, type Part } from '../art/ink'
 import { ANCHORS, S, intro, progress, sample } from '../journey/journey'
-import { buildBatches, checkBatches } from './batches'
+import { PAINTED, checkBatches } from './batches'
+import Batches, { BATCHES } from './SheetBatches'
 import { PLANE, paper } from './paper'
 import { FRAME, REGIONS, type Piece } from './regions'
 import Stats from './Stats'
 
 const { clamp, lerp, smoothstep } = THREE.MathUtils
 
-if (process.env.NODE_ENV !== 'production') checkBatches(REGIONS, buildBatches(REGIONS))
+if (process.env.NODE_ENV !== 'production') checkBatches(REGIONS, BATCHES)
 
+/** The unlit one-off pieces: mist, water, sun and the cave mouths. Painted sheets are drawn in batches (SheetBatches.tsx). */
 function Sheet({ p, reduced }: { p: Piece; reduced: boolean }) {
   const ref = useRef<THREE.Mesh>(null!)
   const [w, h] = p.size
@@ -20,14 +22,10 @@ function Sheet({ p, reduced }: { p: Piece; reduced: boolean }) {
     if (p.kind === 'cave') return new THREE.MeshBasicMaterial({ map: caveTexture(p.seed!, ...p.hole!), alphaTest: 0.5, alphaToCoverage: true, side: THREE.DoubleSide }) // fogged, so the dark walls fade out when seen from far across the world
     if (p.kind === 'sun') return new THREE.MeshBasicMaterial({ map: sunTexture(), transparent: true, depthWrite: false, fog: false })
     if (p.kind === 'mist') return new THREE.MeshBasicMaterial({ map: mistTexture(), transparent: true, depthWrite: false, opacity: 0.7 })
-    if (p.kind === 'water') {
-      const map = waterTexture()
-      map.repeat.set(1, h / w / 4)
-      return new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false })
-    }
-    return paper(texture(p.kind as Kind, p.seed!, p.ink, p.tone))
+    const map = waterTexture()
+    map.repeat.set(1, h / w / 4)
+    return new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false })
   }, [p, w, h])
-  const flat = p.kind === 'mist' || p.kind === 'water' || p.kind === 'sun' || p.kind === 'cave'
 
   useFrame(({ clock, scene }) => {
     if (p.kind === 'mist') (material as THREE.MeshBasicMaterial).color.copy((scene.fog as THREE.Fog).color) // mist takes the colour of the air
@@ -35,15 +33,14 @@ function Sheet({ p, reduced }: { p: Piece; reduced: boolean }) {
     const t = clock.elapsedTime
     if (p.kind === 'water') (material as THREE.MeshBasicMaterial).map!.offset.y = t * 0.35
     else if (p.kind === 'mist') ref.current.position.x = p.at[0] + Math.sin(t * 0.05 + p.at[2]) * 6
-    else if (p.kind === 'cloud') ref.current.position.x = p.at[0] + Math.sin(t * 0.08 + p.at[2]) * 0.6
   })
 
+  // none of these cast or catch shadows
   return (
     <mesh
       ref={ref} geometry={PLANE} material={material}
       position={[p.at[0], p.at[1] + h / 2, p.at[2]]}
       rotation-y={p.yaw ?? 0} scale={[p.flip ? -w : w, h, 1]}
-      castShadow={!flat} receiveShadow={!flat}
     />
   )
 }
@@ -373,10 +370,11 @@ export default function World({ reduced, onReady }: { reduced: boolean; onReady:
         left -= n
         return (
           <group key={r.id} position={r.origin} rotation-y={r.yaw}>
-            {r.pieces.slice(0, n).map((p, i) => <Sheet key={i} p={p} reduced={reduced} />)}
+            {r.pieces.slice(0, n).map((p, i) => !PAINTED.has(p.kind) && <Sheet key={i} p={p} reduced={reduced} />)}
           </group>
         )
       })}
+      <Batches shown={shown} reduced={reduced} />
       {ready && <Backdrop />}
       {ready && <Wukong reduced={reduced} />}
       <Plaques />
