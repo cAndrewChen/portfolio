@@ -319,22 +319,32 @@ function Wukong({ reduced }: { reduced: boolean }) {
  *  Flying in, the handscroll unrolls left to right (--open, from distance so it scrubs); once open the ink spreads (CSS, data-inked). */
 function Plaques() {
   const v = useMemo(() => new THREE.Vector3(), [])
+  // what each plaque was last given, so the page is only touched when something changes (o = -1: nothing written yet)
+  const last = useMemo(() => ANCHORS.map(() => ({ el: null as HTMLElement | null, o: -1, open: '', inked: false, inert: false })), [])
   useFrame(({ camera, size }) => {
-    for (const a of ANCHORS) {
-      const el = document.getElementById(a.id)
-      if (!el) continue
+    ANCHORS.forEach((a, i) => {
+      const s = last[i]
+      s.el ??= document.getElementById(a.id)
+      const el = s.el
+      if (!el) return
       v.set(...a.pos).applyMatrix4(camera.matrixWorldInverse)
       const d = v.length(), ahead = v.z < 0
       v.applyMatrix4(camera.projectionMatrix)
       const near = ahead ? clamp((40 - d) / 12, 0, 1) : 0, leave = clamp((d - 6) / 5, 0, 1)
       const o = Math.min(1, near * 5) * leave, open = smoothstep(near, 0.2, 0.9)
-      el.style.opacity = String(o)
-      el.style.setProperty('--open', open.toFixed(3))
-      el.toggleAttribute('data-inked', open > 0.98)
-      el.style.visibility = o ? 'visible' : 'hidden'
-      el.inert = open < 0.9
+      if (o === 0 && s.o === 0) return // hidden, and already written as hidden
+      const op = open.toFixed(3), inked = open > 0.98, inert = open < 0.9
+      if (o !== s.o) {
+        el.style.opacity = String(o)
+        if (s.o < 0 || (o > 0) !== (s.o > 0)) el.style.visibility = o ? 'visible' : 'hidden'
+      }
+      if (op !== s.open) el.style.setProperty('--open', op)
+      if (inked !== s.inked) el.toggleAttribute('data-inked', inked)
+      if (inert !== s.inert || s.o < 0) el.inert = inert
+      Object.assign(s, { o, open: op, inked, inert })
+      // while it's on screen it follows its point every frame (the camera and the window size can both move it)
       if (o) el.style.transform = `translate(${((v.x + 1) / 2) * size.width}px, ${((1 - v.y) / 2) * size.height}px) translate(-50%, -50%) scale(${clamp(17.4 / d, 0.3, 1.25)})`
-    }
+    })
   })
   return null
 }
