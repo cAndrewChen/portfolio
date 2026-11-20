@@ -24,6 +24,9 @@ const PUFFS = Array.from({ length: 36 }, (_, i) => {
   }
 }).sort((a, b) => a.layer - b.layer)
 
+// Reduced motion, from the visitor's setting, or forced with ?still so before/after screenshots line up frame for frame.
+const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches || new URLSearchParams(location.search).has('still')
+
 const stops = SEGMENTS.map((s, i) => ({ s, i })).filter((x) => x.s.kind === 'explore')
 
 export default function Experience() {
@@ -42,14 +45,14 @@ export default function Experience() {
     flying.current = true
     const land = () => { flying.current = false; html.style.overflow = '' }
     if (!loaded) return land
-    const rm = matchMedia('(prefers-reduced-motion: reduce)').matches
+    const rm = still()
     const arrive = () => root.current?.style.setProperty('--arrive', String(Math.max(0, (intro.k - 0.75) / 0.25)))
     const fly = gsap.to(intro, { k: 1, duration: rm ? 0 : 5.5, delay: rm ? 0 : 0.5, ease: 'power2.inOut', onUpdate: arrive, onComplete: () => { arrive(); land() } })
     return () => { fly.kill(); land() }
   }, [loaded])
 
   useEffect(() => {
-    const rm = matchMedia('(prefers-reduced-motion: reduce)').matches
+    const rm = still()
     setReduced(rm)
     intro.k = 0 // start inside the cave
     gsap.registerPlugin(ScrollTrigger)

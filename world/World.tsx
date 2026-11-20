@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { FIGURE, LEGS, MIST, caveTexture, loadPaintings, mistTexture, rangeTexture, silkTexture, sunTexture, texture, waterTexture, wukongParts, type Kind, type Part } from '../art/ink'
 import { ANCHORS, S, intro, progress, sample } from '../journey/journey'
 import { FRAME, REGIONS, type Piece } from './regions'
+import Stats from './Stats'
 
 const PLANE = new THREE.PlaneGeometry(1, 1)
 const { clamp, lerp, smoothstep } = THREE.MathUtils
@@ -384,6 +385,7 @@ export default function World({ reduced, onReady }: { reduced: boolean; onReady:
       {ready && <Backdrop />}
       {ready && <Wukong reduced={reduced} />}
       <Plaques />
+      <Stats />
     </Canvas>
   )
 }
