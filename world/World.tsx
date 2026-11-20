@@ -332,7 +332,8 @@ function Plaques() {
       v.applyMatrix4(camera.projectionMatrix)
       const near = ahead ? clamp((40 - d) / 12, 0, 1) : 0, leave = clamp((d - 6) / 5, 0, 1)
       const o = Math.min(1, near * 5) * leave, open = smoothstep(near, 0.2, 0.9)
-      if (o === 0 && s.o === 0) return // hidden, and already written as hidden
+      // each value is written only when it changed, so a plaque that stays hidden costs nothing; it still gets reset to
+      // rolled-up and un-inked after it's passed, as before
       const op = open.toFixed(3), inked = open > 0.98, inert = open < 0.9
       if (o !== s.o) {
         el.style.opacity = String(o)
