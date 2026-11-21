@@ -29,14 +29,20 @@ export const sections: Record<string, Section> = {
         kind: 'Software',
         summary: 'Replays any Formula 1 race since 2023 from the free OpenF1 API, with the cars moving round a map of the track, plus a live mode that records F1’s public timing feed through a small Node server.',
         stack: ['JavaScript', 'Node.js', 'OpenF1 API'],
-        links: [{ label: 'GitHub', href: 'https://github.com/cAndrewChen/gridrewind' }],
+        links: [
+          { label: 'Live site', href: 'https://candrewchen.github.io/gridrewind/' },
+          { label: 'GitHub', href: 'https://github.com/cAndrewChen/gridrewind' },
+        ],
       },
       {
         title: 'Halo',
         kind: 'Software',
         summary: "Shows a first-timer what tonight's aurora will look like from where they are, where to stand and how to photograph it: one 0–50 score, a 360° sky, an hour-by-hour night and camera settings for their own phone or camera.",
         stack: ['JavaScript', 'Gemma', 'Gemini API'],
-        links: [{ label: 'GitHub', href: 'https://github.com/cAndrewChen/hacktober-halo' }],
+        links: [
+          { label: 'Live site', href: 'https://candrewchen.github.io/hacktober-halo/' },
+          { label: 'GitHub', href: 'https://github.com/cAndrewChen/hacktober-halo' },
+        ],
       },
       {
         title: 'FRC Team 3647',
@@ -59,7 +65,6 @@ export const sections: Record<string, Section> = {
       {
         title: 'Looking for research opportunities',
         summary: 'Open to research positions in machine learning, AI and robotics.',
-        links: [{ label: 'GitHub', href: site.github }],
       },
     ],
   },
