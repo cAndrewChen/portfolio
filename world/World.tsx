@@ -315,12 +315,34 @@ function Wukong({ reduced }: { reduced: boolean }) {
   )
 }
 
+const EDGE = 16 // px a squeezed plaque keeps clear of the screen edges (room for its rods)
+/** Where a plaque centred at (x, y) with `scale` and unscaled size w × h ends up on a W × H screen.
+ *  On a wide screen a plaque is a small card beside its point and is left exactly where the camera puts it. On a phone
+ *  it is most of the screen wide, so centred on a point 3/4 of the way across it hangs half off the edge; there it is
+ *  shrunk to fit and slid back inside. `k` fades that in as plaques go from 40% to 60% of the screen width, so desktops
+ *  (well under 40%) are untouched. Pure: same inputs, same answer, so scrolling back replays exactly. */
+function fitOnScreen(x: number, y: number, scale: number, w: number, h: number, W: number, H: number) {
+  const k = clamp((w / W - 0.4) / 0.2, 0, 1)
+  if (!k) return [x, y, scale]
+  const s = Math.min(scale, (W - 2 * EDGE) / w, (H - 2 * EDGE) / h), hw = (w * s) / 2, hh = (h * s) / 2
+  const fx = clamp(x, EDGE + hw, W - EDGE - hw), fy = clamp(y, EDGE + hh, H - EDGE - hh)
+  return [lerp(x, fx, k), lerp(y, fy, k), lerp(scale, s, k)]
+}
+
 /** Pins each HTML plaque to its point in the painting: it grows as you fly up to it and slides past as you leave.
- *  Flying in, the handscroll unrolls left to right (--open, from distance so it scrubs); once open the ink spreads (CSS, data-inked). */
+ *  Flying in, the handscroll unrolls left to right (--open, from distance so it scrubs); once open the ink spreads (CSS, data-inked).
+ *  On narrow screens fitOnScreen keeps it inside the edges. */
 function Plaques() {
   const v = useMemo(() => new THREE.Vector3(), [])
   // what each plaque was last given, so the page is only touched when something changes (o = -1: nothing written yet)
   const last = useMemo(() => ANCHORS.map(() => ({ el: null as HTMLElement | null, o: -1, open: '', inked: false, inert: false })), [])
+  // each plaque's laid-out size (unaffected by the transform), kept by a ResizeObserver so the frame loop never reads layout
+  const sizes = useMemo(() => new Map<string, [number, number]>(), [])
+  useEffect(() => {
+    const ro = new ResizeObserver((es) => { for (const e of es) { const el = e.target as HTMLElement; sizes.set(el.id, [el.offsetWidth, el.offsetHeight]) } })
+    for (const a of ANCHORS) { const el = document.getElementById(a.id); if (el) ro.observe(el) }
+    return () => ro.disconnect()
+  }, [sizes])
   useFrame(({ camera, size }) => {
     ANCHORS.forEach((a, i) => {
       const s = last[i]
@@ -344,7 +366,10 @@ function Plaques() {
       if (inert !== s.inert || s.o < 0) el.inert = inert
       Object.assign(s, { o, open: op, inked, inert })
       // while it's on screen it follows its point every frame (the camera and the window size can both move it)
-      if (o) el.style.transform = `translate(${((v.x + 1) / 2) * size.width}px, ${((1 - v.y) / 2) * size.height}px) translate(-50%, -50%) scale(${clamp(17.4 / d, 0.3, 1.25)})`
+      if (!o) return
+      const [w, h] = sizes.get(a.id) ?? [0, 0]
+      const [x, y, sc] = fitOnScreen(((v.x + 1) / 2) * size.width, ((1 - v.y) / 2) * size.height, clamp(17.4 / d, 0.3, 1.25), w, h, size.width, size.height)
+      el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%) scale(${sc})`
     })
   })
   return null
