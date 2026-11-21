@@ -285,7 +285,15 @@ function paintCloud(ctx: Ctx, w: number, h: number, r: () => number) {
   const g = ctx.createLinearGradient(0, base - h * 0.3, 0, base)
   g.addColorStop(0, ink(0)); g.addColorStop(1, ink(0.1))
   ctx.fillStyle = g; ctx.fillRect(0, 0, w, h)
+  // The speckle is clipped to the cloud and drawn normally. On the opaque body that looks the same as source-atop, but
+  // on an iPhone (WebKit) each tiny, faint source-atop dot came out as a dash of rainbow colour.
+  ctx.save()
+  ctx.beginPath()
+  blobs.forEach(([x, y, rx, ry]) => { ctx.moveTo(x + rx, y); ctx.ellipse(x, y, rx, ry, 0, 0, 7) })
+  ctx.clip()
+  ctx.globalCompositeOperation = 'source-over'
   speckle(ctx, r, w, h, 900)
+  ctx.restore()
   silk(ctx, r, w, h, 'source-atop', 0.3)
   ctx.globalCompositeOperation = 'source-over'
 }
